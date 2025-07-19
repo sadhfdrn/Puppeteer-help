@@ -14,6 +14,9 @@ const wss = new WebSocket.Server({ server });
 
 const port = process.env.PORT || 3001;
 
+// Trust the first proxy
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {

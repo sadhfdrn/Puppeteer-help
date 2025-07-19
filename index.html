@@ -541,7 +541,10 @@
                         <div class="card-icon">📋</div>
                         Activity Logs
                     </h3>
-                    <button id="clear-logs" style="background: none; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.25rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Clear</button>
+                    <div>
+                        <button id="copy-logs" style="background: none; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.25rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-right: 0.5rem;">Copy</button>
+                        <button id="clear-logs" style="background: none; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.25rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Clear</button>
+                    </div>
                 </div>
                 <div id="log-container" class="log-container">
                     <div class="log-entry log-info">[System] Initializing AI-Powered Scraper Helper v2.0...</div>
@@ -615,6 +618,7 @@
                     connectionStatus: document.getElementById('connection-status'),
                     connectionText: document.getElementById('connection-text'),
                     clearLogsBtn: document.getElementById('clear-logs'),
+                    copyLogsBtn: document.getElementById('copy-logs'),
                     analysisStats: document.getElementById('analysis-stats'),
                     statsPanel: document.getElementById('stats-panel')
                 };
@@ -622,7 +626,7 @@
 
             initializeWebSocket() {
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || (protocol === 'wss:' ? 443 : 80)}`;
+                const wsUrl = `${protocol}//${window.location.host}`;
                 
                 try {
                     this.ws = new WebSocket(wsUrl);
@@ -679,7 +683,8 @@
             bindEvents() {
                 this.elements.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
                 this.elements.clearLogsBtn.addEventListener('click', () => this.clearLogs());
-                
+                this.elements.copyLogsBtn.addEventListener('click', () => this.copyLogs());
+
                 // Auto-save URL input to localStorage
                 this.elements.urlInput.addEventListener('input', () => {
                     localStorage.setItem('scraper-last-url', this.elements.urlInput.value);
@@ -924,7 +929,7 @@ JS Execution Time: ${metadata.jsExecutionTime || 'N/A'}ms
 
                 // Show stats panel after first analysis
                 if (this.stats.totalAnalyses === 1) {
-                    this.elements.statsPanel.style.display = 'block';
+                    this.elements.statsPanel.style.display = 'grid';
                 }
             }
 
@@ -946,6 +951,23 @@ JS Execution Time: ${metadata.jsExecutionTime || 'N/A'}ms
 
             clearLogs() {
                 this.elements.logContainer.innerHTML = '<div class="log-entry log-info">[System] Logs cleared</div>';
+            }
+
+            copyLogs() {
+                const logText = Array.from(this.elements.logContainer.children)
+                    .map(entry => entry.textContent)
+                    .join('\n');
+                
+                navigator.clipboard.writeText(logText).then(() => {
+                    this.appendLog('[System] Logs copied to clipboard', 'info');
+                    const copyButton = document.getElementById('copy-logs');
+                    if (copyButton) {
+                        copyButton.textContent = 'Copied!';
+                        setTimeout(() => { copyButton.textContent = 'Copy'; }, 2000);
+                    }
+                }).catch(err => {
+                    this.appendLog('[System] Failed to copy logs', 'error');
+                });
             }
 
             escapeHtml(text) {

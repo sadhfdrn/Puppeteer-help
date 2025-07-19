@@ -219,6 +219,36 @@ async function configurePage(page, logCallback) {
 }
 
 /**
+ * Handles DDoS Guard and other interstitial pages.
+ * @param {Page} page - Puppeteer page instance
+ * @param {Function} logCallback - Logging callback function
+ */
+async function handleInterstitialPages(page, logCallback) {
+  try {
+    const title = await page.title();
+    if (title.toLowerCase().includes('ddos-guard')) {
+      logCallback('[Puppeteer] DDoS-Guard detected. Waiting for it to resolve...');
+      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 });
+      logCallback('[Puppeteer] DDoS-Guard page likely resolved.');
+    }
+
+    // Handle pahe.win redirects
+    if (page.url().includes('pahe.win')) {
+      logCallback('[Puppeteer] pahe.win redirect detected. Waiting and clicking continue...');
+      await sleep(6000); // Wait for the countdown
+      const continueButton = await page.$('form button[type=submit]');
+      if(continueButton) {
+        await continueButton.click();
+        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
+        logCallback('[Puppeteer] Clicked continue on redirect page.');
+      }
+    }
+  } catch (error) {
+    logCallback(`[Puppeteer] Could not bypass interstitial page: ${error.message}`, 'warn');
+  }
+}
+
+/**
  * Wait for page to be fully loaded with custom conditions
  * @param {Page} page - Puppeteer page instance
  * @param {Function} logCallback - Logging callback function
@@ -226,8 +256,7 @@ async function configurePage(page, logCallback) {
 async function waitForPageLoad(page, logCallback) {
   try {
     // Wait for network to be idle
-    await page.waitForLoadState?.('networkidle') || 
-          page.waitForFunction(() => document.readyState === 'complete', { timeout: CONFIG.PAGE_TIMEOUT });
+    await page.waitForNetworkIdle({idleTime: 1000, timeout: CONFIG.PAGE_TIMEOUT})
     
     // Wait for common anime site elements
     const selectors = [
@@ -356,14 +385,13 @@ async function scrapeAnimePahe(url, logCallback) {
     logCallback(`[Puppeteer] Navigating to ${url}...`);
     
     // Navigate with retry logic
-    let navigationSuccess = false;
     for (let attempt = 1; attempt <= CONFIG.MAX_RETRIES; attempt++) {
       try {
         await page.goto(url, { 
           waitUntil: 'networkidle2', 
           timeout: CONFIG.NAVIGATION_TIMEOUT 
         });
-        navigationSuccess = true;
+        await handleInterstitialPages(page, logCallback);
         break;
       } catch (error) {
         logCallback(`[Puppeteer] Navigation attempt ${attempt} failed: ${error.message}`, 'warn');
@@ -372,10 +400,6 @@ async function scrapeAnimePahe(url, logCallback) {
         }
         await sleep(CONFIG.RETRY_DELAY * attempt);
       }
-    }
-    
-    if (!navigationSuccess) {
-      throw new Error('Navigation failed after all retry attempts');
     }
     
     logCallback('[Puppeteer] Page loaded successfully');
