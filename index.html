@@ -1,288 +1,1011 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Powered Scraper Helper</title>
+    <title>AI-Powered Scraper Helper v2.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --dark-grey: #222222;
-            --light-grey: #333333;
-            --vibrant-purple: #A020F0;
-            --electric-blue: #7DF9FF;
-            --text-color: #e0e0e0;
-            --border-color: #444;
+            --primary-bg: #0a0a0a;
+            --secondary-bg: #1a1a1a;
+            --card-bg: #252525;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --border-color: #374151;
+            --border-accent: #4f46e5;
+            --gradient-primary: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            --gradient-secondary: linear-gradient(135deg, #1e1b4b, #312e81);
+            --shadow-glow: 0 0 30px rgba(139, 92, 246, 0.3);
+            --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: .7;
-            }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        body { 
+
+        body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--dark-grey); 
-            color: var(--text-color); 
-            padding: 20px; 
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
         }
-        header { text-align: center; margin-bottom: 2rem; }
-        h1, h2 { color: var(--electric-blue); }
-        h1 { font-size: 2.5rem; font-weight: bold; text-shadow: 0 0 5px var(--electric-blue);}
-        h2 { border-bottom: 2px solid var(--vibrant-purple); padding-bottom: 5px; margin-top: 2rem; font-size: 1.5rem;}
-        p { color: #b0b0b0; }
-        main {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            flex-grow: 1;
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
         }
-        .control-panel, .results-panel {
-            background-color: var(--light-grey);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--border-color);
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        #scrape-form { display: flex; flex-direction: column; }
-        input[type="text"] { 
-            padding: 12px; 
-            border-radius: 5px; 
-            border: 1px solid var(--border-color); 
-            background-color: #2a2a2a; 
-            color: var(--text-color); 
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .header-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .header-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            font-weight: 300;
             margin-bottom: 1rem;
-            font-size: 1rem;
         }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--vibrant-purple);
-            box-shadow: 0 0 8px var(--vibrant-purple);
+
+        .version-badge {
+            display: inline-block;
+            background: var(--gradient-secondary);
+            color: var(--text-primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid var(--border-accent);
         }
-        button { 
-            cursor: pointer; 
-            background-color: var(--vibrant-purple); 
-            color: white; 
-            font-weight: bold; 
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            transition: all 0.2s ease-in-out;
-        }
-        button:hover:not(:disabled) { 
-            background-color: #8A1ABE;
-            box-shadow: 0 0 10px #A020F0;
-        }
-        button:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        #log-container {
-            background-color: #1e1e1e;
-            border: 1px solid var(--border-color);
-            padding: 15px;
-            border-radius: 5px;
-            height: 400px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.9rem;
-            white-space: pre-wrap;
-        }
-        .log-entry { margin-bottom: 5px; }
-        .log-info { color: #ccc; }
-        .log-error { color: #ff6b6b; font-weight: bold;}
-        pre { 
-            background-color: #1e1e1e; 
-            border: 1px solid var(--border-color); 
-            padding: 15px; 
-            border-radius: 5px; 
-            white-space: pre-wrap; 
-            word-wrap: break-word; 
-        }
-        textarea { 
-            width: 100%; 
-            height: 200px; 
-            background-color: #2a2a2a; 
-            color: var(--text-color); 
-            border: 1px solid var(--border-color); 
-            border-radius: 5px; 
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             margin-top: 1rem;
-            font-family: monospace;
+            padding: 0.5rem 1rem;
+            background: var(--secondary-bg);
+            border-radius: 25px;
+            border: 1px solid var(--border-color);
         }
-        .result-section { 
-            border: 1px solid var(--border-color); 
-            border-radius: 8px; 
-            padding: 1rem; 
-            margin-bottom: 1rem;
-            background-color: var(--light-grey);
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-red);
+            animation: pulse 2s infinite;
         }
-        #results-container {
+
+        .status-dot.connected {
+            background: var(--accent-green);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient-primary);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--gradient-primary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Form Styles */
+        .scrape-form {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
         }
-        @media (max-width: 900px) {
-            main { grid-template-columns: 1fr; }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: var(--secondary-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .url-input:focus {
+            border-color: var(--border-accent);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .analyze-btn {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .analyze-btn.loading {
+            color: transparent;
+        }
+
+        .analyze-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Log Container */
+        .log-container {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            position: relative;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: var(--primary-bg);
+            border-radius: 4px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-info {
+            color: var(--text-secondary);
+            border-left-color: var(--accent-cyan);
+        }
+
+        .log-error {
+            color: var(--accent-red);
+            border-left-color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .log-warn {
+            color: var(--accent-orange);
+            border-left-color: var(--accent-orange);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        /* Results Panel */
+        .results-panel {
+            min-height: 600px;
+        }
+
+        .result-section {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .result-section h3 {
+            color: var(--accent-cyan);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .result-section h3::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+        }
+
+        .result-content {
+            background: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .result-textarea {
+            width: 100%;
+            height: 250px;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            outline: none;
+        }
+
+        .result-textarea:focus {
+            border-color: var(--border-accent);
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+        }
+
+        .save-btn {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .save-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-item {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+            
+            .header-title {
+                font-size: 2.5rem;
+            }
+            
+            .log-container {
+                height: 300px;
+            }
+        }
+
+        /* Loading States */
+        .shimmer {
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.1) 50%, 
+                transparent 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .placeholder-content {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: 2rem;
+            background: var(--secondary-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            margin: 1rem 0;
         }
     </style>
-     <link rel="preconnect" href="https://fonts.googleapis.com">
-     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <h1>AI-Powered Scraper Helper</h1>
-        <p>Enter an episode URL. Puppeteer will fetch the page, and an AI will analyze its content to provide scraping insights.</p>
-    </header>
-    
-    <main>
-        <div class="control-panel">
-            <h2>Controls & Logs</h2>
-            <form id="scrape-form">
-                <input type="text" id="url-input" placeholder="https://animepahe.ru/play/..." required>
-                <button type="submit" id="analyze-button">Analyze with AI</button>
-            </form>
-            <div id="log-container">
-                <div class="log-entry log-info">[WebSocket] Waiting for connection...</div>
+    <div class="container">
+        <header>
+            <h1 class="header-title">AI-Powered Scraper Helper</h1>
+            <p class="header-subtitle">Advanced web scraping with AI-driven content analysis</p>
+            <span class="version-badge">v2.0</span>
+            <div class="status-indicator">
+                <div class="status-dot" id="connection-status"></div>
+                <span id="connection-text">Connecting...</span>
             </div>
-        </div>
-        <div class="results-panel">
-             <h2>Results</h2>
-             <div id="results-container">
-                <div class="result-section">
-                    <p>Analysis results will appear here after you submit a URL.</p>
+        </header>
+
+        <main class="main-grid">
+            <!-- Control Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">🚀</div>
+                        Control Panel
+                    </h2>
+                </div>
+                
+                <form id="scrape-form" class="scrape-form">
+                    <div class="input-group">
+                        <label for="url-input" class="input-label">Episode URL</label>
+                        <input 
+                            type="text" 
+                            id="url-input" 
+                            class="url-input"
+                            placeholder="https://animepahe.ru/play/..." 
+                            required
+                        >
+                    </div>
+                    <button type="submit" id="analyze-button" class="analyze-btn">
+                        Analyze with AI
+                    </button>
+                </form>
+
+                <div class="card-header" style="margin-top: 2rem; margin-bottom: 1rem;">
+                    <h3 class="card-title">
+                        <div class="card-icon">📋</div>
+                        Activity Logs
+                    </h3>
+                    <button id="clear-logs" style="background: none; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.25rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Clear</button>
+                </div>
+                <div id="log-container" class="log-container">
+                    <div class="log-entry log-info">[System] Initializing AI-Powered Scraper Helper v2.0...</div>
                 </div>
             </div>
+
+            <!-- Results Panel -->
+            <div class="card results-panel">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">🧠</div>
+                        Analysis Results
+                    </h2>
+                    <div id="analysis-stats" style="font-size: 0.8rem; color: var(--text-muted);"></div>
+                </div>
+                
+                <div id="results-container">
+                    <div class="placeholder-content">
+                        <p>🎯 Analysis results will appear here after you submit a URL</p>
+                        <p style="margin-top: 0.5rem; font-size: 0.9rem;">The AI will analyze streaming logic, download links, and page structure</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Stats Panel -->
+        <div class="card stats-panel" id="stats-panel" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-value" id="total-analyses">0</div>
+                <div class="stat-label">Total Analyses</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="success-rate">0%</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="avg-duration">0s</div>
+                <div class="stat-label">Avg Duration</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="active-connections">0</div>
+                <div class="stat-label">Active Connections</div>
+            </div>
         </div>
-    </main>
+    </div>
 
     <script>
-        const form = document.getElementById('scrape-form');
-        const urlInput = document.getElementById('url-input');
-        const analyzeButton = document.getElementById('analyze-button');
-        const logContainer = document.getElementById('log-container');
-        const resultsContainer = document.getElementById('results-container');
-        
-        // --- WebSocket Setup ---
-        const ws = new WebSocket(`ws://${window.location.host}`);
-        
-        ws.onopen = () => {
-            appendLog('[WebSocket] Connection established.', 'info');
-        };
-        
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'log') {
-                appendLog(data.message, data.level);
+        class ScraperApp {
+            constructor() {
+                this.ws = null;
+                this.isConnected = false;
+                this.stats = {
+                    totalAnalyses: 0,
+                    successfulAnalyses: 0,
+                    durations: [],
+                    startTime: Date.now()
+                };
+                
+                this.initializeElements();
+                this.initializeWebSocket();
+                this.bindEvents();
             }
-        };
 
-        ws.onclose = () => {
-            appendLog('[WebSocket] Connection closed. Please refresh the page.', 'error');
-        };
+            initializeElements() {
+                this.elements = {
+                    form: document.getElementById('scrape-form'),
+                    urlInput: document.getElementById('url-input'),
+                    analyzeButton: document.getElementById('analyze-button'),
+                    logContainer: document.getElementById('log-container'),
+                    resultsContainer: document.getElementById('results-container'),
+                    connectionStatus: document.getElementById('connection-status'),
+                    connectionText: document.getElementById('connection-text'),
+                    clearLogsBtn: document.getElementById('clear-logs'),
+                    analysisStats: document.getElementById('analysis-stats'),
+                    statsPanel: document.getElementById('stats-panel')
+                };
+            }
 
-        ws.onerror = (error) => {
-            appendLog('[WebSocket] An error occurred. See browser console for details.', 'error');
-            console.error("WebSocket Error: ", error);
-        };
-        
-        function appendLog(message, level = 'info') {
-            const entry = document.createElement('div');
-            entry.className = `log-entry log-${level}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logContainer.appendChild(entry);
-            logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll
-        }
-        // --- End WebSocket Setup ---
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault(); // This is the crucial fix.
-            const url = urlInput.value;
-            
-            analyzeButton.disabled = true;
-            analyzeButton.textContent = 'Analyzing...';
-            resultsContainer.innerHTML = '<div class="result-section"><p>Analysis in progress... Please wait.</p></div>';
-
-            try {
-                const response = await fetch(`/scrape?url=${encodeURIComponent(url)}`);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText}`);
+            initializeWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}`;
+                
+                try {
+                    this.ws = new WebSocket(wsUrl);
+                    this.setupWebSocketHandlers();
+                } catch (error) {
+                    console.error('Failed to initialize WebSocket:', error);
+                    this.appendLog('Failed to connect to server', 'error');
                 }
-                const data = await response.json();
-                displayResults(data);
-
-            } catch (error) {
-                const errorHtml = `
-                    <div class="result-section">
-                        <h2>Error</h2>
-                        <pre>${error.message}</pre>
-                    </div>
-                `;
-                resultsContainer.innerHTML = errorHtml;
-                appendLog(`Scrape failed: ${error.message}`, 'error');
-            } finally {
-                analyzeButton.disabled = false;
-                analyzeButton.textContent = 'Analyze with AI';
-            }
-        });
-
-        function displayResults(data) {
-             resultsContainer.innerHTML = `
-                <div class="result-section">
-                    <h2>AI Analysis: Streaming Logic</h2>
-                    <pre>${data.analysis?.streamingLogic || 'Not available.'}</pre>
-                </div>
-                <div class="result-section">
-                    <h2>AI Analysis: Download Links</h2>
-                    <pre>${JSON.stringify(data.analysis?.downloadLinks || [], null, 2)}</pre>
-                </div>
-                 <div class="result-section">
-                    <h2>Puppeteer: Intercepted Kwik Stream URLs</h2>
-                    <pre>${JSON.stringify(data.kwik?.sources || 'No Kwik URLs intercepted.', null, 2)}</pre>
-                </div>
-                <div class="result-section">
-                    <h2>Full Raw Data (Editable)</h2>
-                    <textarea id="full-data-textarea">${JSON.stringify(data, null, 2)}</textarea>
-                    <button id="save-button" style="margin-top: 1rem;">Save Mapping</button>
-                </div>
-             `;
-             document.getElementById('save-button').addEventListener('click', saveMapping);
-        }
-
-        async function saveMapping() {
-            const textarea = document.getElementById('full-data-textarea');
-            if (!textarea.value) {
-                alert('No data to save.');
-                return;
             }
 
-            try {
-                const response = await fetch('/save', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ data: textarea.value }),
+            setupWebSocketHandlers() {
+                this.ws.onopen = () => {
+                    this.isConnected = true;
+                    this.updateConnectionStatus(true);
+                    this.appendLog('[WebSocket] Connection established successfully', 'info');
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'log') {
+                            this.appendLog(data.message, data.level);
+                        }
+                    } catch (error) {
+                        console.error('Failed to parse WebSocket message:', error);
+                    }
+                };
+
+                this.ws.onclose = () => {
+                    this.isConnected = false;
+                    this.updateConnectionStatus(false);
+                    this.appendLog('[WebSocket] Connection closed. Attempting to reconnect...', 'error');
+                    
+                    // Attempt to reconnect after 3 seconds
+                    setTimeout(() => this.initializeWebSocket(), 3000);
+                };
+
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.appendLog('[WebSocket] Connection error occurred', 'error');
+                };
+            }
+
+            updateConnectionStatus(connected) {
+                if (connected) {
+                    this.elements.connectionStatus.classList.add('connected');
+                    this.elements.connectionText.textContent = 'Connected';
+                } else {
+                    this.elements.connectionStatus.classList.remove('connected');
+                    this.elements.connectionText.textContent = 'Disconnected';
+                }
+            }
+
+            bindEvents() {
+                this.elements.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+                this.elements.clearLogsBtn.addEventListener('click', () => this.clearLogs());
+                
+                // Auto-save URL input to localStorage
+                this.elements.urlInput.addEventListener('input', () => {
+                    localStorage.setItem('scraper-last-url', this.elements.urlInput.value);
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Failed to save: ${response.statusText}`);
+                // Load last URL from localStorage
+                const lastUrl = localStorage.getItem('scraper-last-url');
+                if (lastUrl) {
+                    this.elements.urlInput.value = lastUrl;
                 }
-                alert('Mapping saved successfully!');
-                appendLog('Mapping saved successfully to mapping.json!', 'info');
-            } catch (error) {
-                console.error('Save failed:', error);
-                alert(`Error saving mapping: ${error.message}`);
-                appendLog(`Error saving mapping: ${error.message}`, 'error');
+            }
+
+            async handleFormSubmit(event) {
+                event.preventDefault();
+                
+                if (!this.isConnected) {
+                    this.appendLog('[Error] Not connected to server. Please wait for connection.', 'error');
+                    return;
+                }
+
+                const url = this.elements.urlInput.value.trim();
+                if (!url) {
+                    this.appendLog('[Error] Please enter a valid URL', 'error');
+                    return;
+                }
+
+                this.setAnalyzing(true);
+                const startTime = Date.now();
+
+                try {
+                    const response = await fetch(`/scrape?url=${encodeURIComponent(url)}`);
+                    const duration = Date.now() - startTime;
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText}`);
+                    }
+
+                    const result = await response.json();
+                    this.displayResults(result);
+                    this.updateStats(true, duration);
+                    this.appendLog(`[Success] Analysis completed in ${duration}ms`, 'info');
+
+                } catch (error) {
+                    const duration = Date.now() - startTime;
+                    this.updateStats(false, duration);
+                    this.displayError(error.message);
+                    this.appendLog(`[Error] Analysis failed: ${error.message}`, 'error');
+                } finally {
+                    this.setAnalyzing(false);
+                }
+            }
+
+            setAnalyzing(analyzing) {
+                this.elements.analyzeButton.disabled = analyzing;
+                
+                if (analyzing) {
+                    this.elements.analyzeButton.classList.add('loading');
+                    this.elements.analyzeButton.textContent = 'Analyzing...';
+                    this.showPlaceholder();
+                } else {
+                    this.elements.analyzeButton.classList.remove('loading');
+                    this.elements.analyzeButton.textContent = 'Analyze with AI';
+                }
+            }
+
+            showPlaceholder() {
+                this.elements.resultsContainer.innerHTML = `
+                    <div class="result-section shimmer">
+                        <h3>🔍 AI Analysis in Progress</h3>
+                        <div class="placeholder-content">
+                            <p>Puppeteer is loading the page and extracting content...</p>
+                            <p>AI is analyzing streaming logic and download links...</p>
+                            <p>This may take 30-60 seconds depending on page complexity.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            displayResults(data) {
+                const analysis = data.analysis || {};
+                const metadata = data.metadata || {};
+
+                this.elements.resultsContainer.innerHTML = `
+                    <div class="result-section">
+                        <h3>🧠 AI Analysis: Streaming Logic</h3>
+                        <div class="result-content">${this.escapeHtml(analysis.streamingLogic || 'Not available')}</div>
+                    </div>
+
+                    <div class="result-section">
+                        <h3>📥 Download Links (${(analysis.downloadLinks || []).length})</h3>
+                        <div class="result-content">${JSON.stringify(analysis.downloadLinks || [], null, 2)}</div>
+                    </div>
+
+                    <div class="result-section">
+                        <h3>🎬 Streaming Sources</h3>
+                        <div class="result-content">${JSON.stringify(analysis.streamingSources || [], null, 2)}</div>
+                    </div>
+
+                    <div class="result-section">
+                        <h3>🔗 Kwik URLs (${(data.kwik?.sources || []).length})</h3>
+                        <div class="result-content">${JSON.stringify(data.kwik?.sources || [], null, 2)}</div>
+                    </div>
+
+                    <div class="result-section">
+                        <h3>📊 Page Structure</h3>
+                        <div class="result-content">${JSON.stringify(analysis.pageStructure || {}, null, 2)}</div>
+                    </div>
+
+                    <div class="result-section">
+                        <h3>🛠️ Technical Details</h3>
+                        <div class="result-content">${JSON.stringify(analysis.technicalDetails || {}, null, 2)}</div>
+                    </div>
+
+                    <div class="result-section">
+                        <h3>💾 Raw Data (Editable)</h3>
+                        <textarea id="full-data-textarea" class="result-textarea">${JSON.stringify(data, null, 2)}</textarea>
+                        <button id="save-button" class="save-btn">💾 Save Analysis</button>
+                        <button id="copy-button" class="save-btn" style="background: var(--accent-cyan); margin-left: 1rem;">📋 Copy to Clipboard</button>
+                    </div>
+
+                    <div class="result-section">
+                        <h3>📈 Performance Metrics</h3>
+                        <div class="result-content">
+Processing Time: ${metadata.processingTime || 'N/A'}ms
+Page Load Time: ${metadata.pageLoadTime || 'N/A'}ms
+Elements Found: ${metadata.elementsFound || 'N/A'}
+JS Execution Time: ${metadata.jsExecutionTime || 'N/A'}ms
+                        </div>
+                    </div>
+                `;
+
+                // Bind save and copy functionality
+                this.bindResultActions();
+                this.updateAnalysisStats(data);
+            }
+
+            bindResultActions() {
+                const saveBtn = document.getElementById('save-button');
+                const copyBtn = document.getElementById('copy-button');
+                const textarea = document.getElementById('full-data-textarea');
+
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', () => {
+                        const data = textarea.value;
+                        const blob = new Blob([data], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `scraper-analysis-${Date.now()}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        this.appendLog('[Success] Analysis data saved to file', 'info');
+                    });
+                }
+
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', async () => {
+                        try {
+                            await navigator.clipboard.writeText(textarea.value);
+                            this.appendLog('[Success] Analysis data copied to clipboard', 'info');
+                            copyBtn.textContent = '✅ Copied!';
+                            setTimeout(() => {
+                                copyBtn.textContent = '📋 Copy to Clipboard';
+                            }, 2000);
+                        } catch (error) {
+                            this.appendLog('[Error] Failed to copy to clipboard', 'error');
+                        }
+                    });
+                }
+            }
+
+            updateAnalysisStats(data) {
+                const analysis = data.analysis || {};
+                const metadata = data.metadata || {};
+                
+                const stats = [
+                    `Download Links: ${(analysis.downloadLinks || []).length}`,
+                    `Streaming Sources: ${(analysis.streamingSources || []).length}`,
+                    `Processing Time: ${metadata.processingTime || 'N/A'}ms`,
+                    `Success: ${data.success ? '✅' : '❌'}`
+                ].join(' • ');
+
+                this.elements.analysisStats.textContent = stats;
+            }
+
+            displayError(errorMessage) {
+                this.elements.resultsContainer.innerHTML = `
+                    <div class="result-section">
+                        <h3>❌ Error</h3>
+                        <div class="result-content" style="color: var(--accent-red);">${this.escapeHtml(errorMessage)}</div>
+                    </div>
+                    <div class="result-section">
+                        <h3>🔧 Troubleshooting Tips</h3>
+                        <div class="result-content">
+• Check if the URL is accessible and valid
+• Ensure the website allows scraping
+• Try again in a few moments if the site is temporarily unavailable
+• Check browser console for additional error details
+                        </div>
+                    </div>
+                `;
+            }
+
+            updateStats(success, duration) {
+                this.stats.totalAnalyses++;
+                this.stats.durations.push(duration);
+                
+                if (success) {
+                    this.stats.successfulAnalyses++;
+                }
+
+                // Update stats panel
+                const totalElement = document.getElementById('total-analyses');
+                const successRateElement = document.getElementById('success-rate');
+                const avgDurationElement = document.getElementById('avg-duration');
+                const activeConnectionsElement = document.getElementById('active-connections');
+
+                if (totalElement) {
+                    totalElement.textContent = this.stats.totalAnalyses;
+                }
+
+                if (successRateElement) {
+                    const rate = this.stats.totalAnalyses > 0 
+                        ? Math.round((this.stats.successfulAnalyses / this.stats.totalAnalyses) * 100)
+                        : 0;
+                    successRateElement.textContent = `${rate}%`;
+                }
+
+                if (avgDurationElement) {
+                    const avgDuration = this.stats.durations.length > 0
+                        ? Math.round(this.stats.durations.reduce((a, b) => a + b, 0) / this.stats.durations.length)
+                        : 0;
+                    avgDurationElement.textContent = `${(avgDuration / 1000).toFixed(1)}s`;
+                }
+
+                if (activeConnectionsElement) {
+                    activeConnectionsElement.textContent = this.isConnected ? '1' : '0';
+                }
+
+                // Show stats panel after first analysis
+                if (this.stats.totalAnalyses === 1) {
+                    this.elements.statsPanel.style.display = 'block';
+                }
+            }
+
+            appendLog(message, level = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry log-${level}`;
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                
+                this.elements.logContainer.appendChild(logEntry);
+                this.elements.logContainer.scrollTop = this.elements.logContainer.scrollHeight;
+                
+                // Keep only last 100 log entries
+                const entries = this.elements.logContainer.children;
+                if (entries.length > 100) {
+                    this.elements.logContainer.removeChild(entries[0]);
+                }
+            }
+
+            clearLogs() {
+                this.elements.logContainer.innerHTML = '<div class="log-entry log-info">[System] Logs cleared</div>';
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
         }
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.scraperApp = new ScraperApp();
+            
+            // Add some helpful keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Ctrl/Cmd + Enter to submit form
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('scrape-form').dispatchEvent(new Event('submit'));
+                }
+                
+                // Ctrl/Cmd + L to clear logs
+                if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                    e.preventDefault();
+                    window.scraperApp.clearLogs();
+                }
+            });
+
+            // Add periodic connection health check
+            setInterval(() => {
+                if (window.scraperApp && window.scraperApp.ws) {
+                    if (window.scraperApp.ws.readyState === WebSocket.CLOSED) {
+                        window.scraperApp.initializeWebSocket();
+                    }
+                }
+            }, 10000); // Check every 10 seconds
+
+            // Add visual feedback for successful operations
+            const style = document.createElement('style');
+            style.textContent = `
+                .success-flash {
+                    animation: successFlash 0.5s ease-in-out;
+                }
+                
+                @keyframes successFlash {
+                    0%, 100% { background-color: transparent; }
+                    50% { background-color: rgba(16, 185, 129, 0.2); }
+                }
+                
+                .error-flash {
+                    animation: errorFlash 0.5s ease-in-out;
+                }
+                
+                @keyframes errorFlash {
+                    0%, 100% { background-color: transparent; }
+                    50% { background-color: rgba(239, 68, 68, 0.2); }
+                }
+            `;
+            document.head.appendChild(style);
+        });
     </script>
 </body>
 </html>
