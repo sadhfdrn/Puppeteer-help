@@ -14,6 +14,14 @@
             --text-color: #e0e0e0;
             --border-color: #444;
         }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .7;
+            }
+        }
         body { 
             font-family: 'Inter', sans-serif;
             background-color: var(--dark-grey); 
@@ -73,6 +81,7 @@
         button:disabled {
             background-color: #555;
             cursor: not-allowed;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         #log-container {
             background-color: #1e1e1e;
@@ -112,6 +121,11 @@
             padding: 1rem; 
             margin-bottom: 1rem;
             background-color: var(--light-grey);
+        }
+        #results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
         }
         @media (max-width: 900px) {
             main { grid-template-columns: 1fr; }
@@ -188,12 +202,12 @@
         // --- End WebSocket Setup ---
 
         form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // This is the crucial fix.
             const url = urlInput.value;
             
             analyzeButton.disabled = true;
             analyzeButton.textContent = 'Analyzing...';
-            resultsContainer.innerHTML = '<div class="result-section"><p>Analysis in progress...</p></div>';
+            resultsContainer.innerHTML = '<div class="result-section"><p>Analysis in progress... Please wait.</p></div>';
 
             try {
                 const response = await fetch(`/scrape?url=${encodeURIComponent(url)}`);
@@ -235,7 +249,7 @@
                 </div>
                 <div class="result-section">
                     <h2>Full Raw Data (Editable)</h2>
-                    <textarea id="full-data-textarea" readonly>${JSON.stringify(data, null, 2)}</textarea>
+                    <textarea id="full-data-textarea">${JSON.stringify(data, null, 2)}</textarea>
                     <button id="save-button" style="margin-top: 1rem;">Save Mapping</button>
                 </div>
              `;

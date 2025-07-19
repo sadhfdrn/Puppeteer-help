@@ -1,5 +1,287 @@
-# Puppeteer-help
-# Puppeteer-help
-# Puppeteer-help
-# Puppeteer-help
-# Puppeteer-help
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Scraper Helper</title>
+    <style>
+        :root {
+            --dark-grey: #222222;
+            --light-grey: #333333;
+            --vibrant-purple: #A020F0;
+            --electric-blue: #7DF9FF;
+            --text-color: #e0e0e0;
+            --border-color: #444;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .7;
+            }
+        }
+        body { 
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-grey); 
+            color: var(--text-color); 
+            padding: 20px; 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header { text-align: center; margin-bottom: 2rem; }
+        h1, h2 { color: var(--electric-blue); }
+        h1 { font-size: 2.5rem; font-weight: bold; text-shadow: 0 0 5px var(--electric-blue);}
+        h2 { border-bottom: 2px solid var(--vibrant-purple); padding-bottom: 5px; margin-top: 2rem; font-size: 1.5rem;}
+        p { color: #b0b0b0; }
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            flex-grow: 1;
+        }
+        .control-panel, .results-panel {
+            background-color: var(--light-grey);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+        }
+        #scrape-form { display: flex; flex-direction: column; }
+        input[type="text"] { 
+            padding: 12px; 
+            border-radius: 5px; 
+            border: 1px solid var(--border-color); 
+            background-color: #2a2a2a; 
+            color: var(--text-color); 
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--vibrant-purple);
+            box-shadow: 0 0 8px var(--vibrant-purple);
+        }
+        button { 
+            cursor: pointer; 
+            background-color: var(--vibrant-purple); 
+            color: white; 
+            font-weight: bold; 
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            transition: all 0.2s ease-in-out;
+        }
+        button:hover:not(:disabled) { 
+            background-color: #8A1ABE;
+            box-shadow: 0 0 10px #A020F0;
+        }
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        #log-container {
+            background-color: #1e1e1e;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+        .log-entry { margin-bottom: 5px; }
+        .log-info { color: #ccc; }
+        .log-error { color: #ff6b6b; font-weight: bold;}
+        pre { 
+            background-color: #1e1e1e; 
+            border: 1px solid var(--border-color); 
+            padding: 15px; 
+            border-radius: 5px; 
+            white-space: pre-wrap; 
+            word-wrap: break-word; 
+        }
+        textarea { 
+            width: 100%; 
+            height: 200px; 
+            background-color: #2a2a2a; 
+            color: var(--text-color); 
+            border: 1px solid var(--border-color); 
+            border-radius: 5px; 
+            margin-top: 1rem;
+            font-family: monospace;
+        }
+        .result-section { 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            padding: 1rem; 
+            margin-bottom: 1rem;
+            background-color: var(--light-grey);
+        }
+        #results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        @media (max-width: 900px) {
+            main { grid-template-columns: 1fr; }
+        }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>AI-Powered Scraper Helper</h1>
+        <p>Enter an episode URL. Puppeteer will fetch the page, and an AI will analyze its content to provide scraping insights.</p>
+    </header>
+    
+    <main>
+        <div class="control-panel">
+            <h2>Controls & Logs</h2>
+            <form id="scrape-form">
+                <input type="text" id="url-input" placeholder="https://animepahe.ru/play/..." required>
+                <button type="submit" id="analyze-button">Analyze with AI</button>
+            </form>
+            <div id="log-container">
+                <div class="log-entry log-info">[WebSocket] Waiting for connection...</div>
+            </div>
+        </div>
+        <div class="results-panel">
+             <h2>Results</h2>
+             <div id="results-container">
+                <div class="result-section">
+                    <p>Analysis results will appear here after you submit a URL.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const form = document.getElementById('scrape-form');
+        const urlInput = document.getElementById('url-input');
+        const analyzeButton = document.getElementById('analyze-button');
+        const logContainer = document.getElementById('log-container');
+        const resultsContainer = document.getElementById('results-container');
+        
+        // --- WebSocket Setup ---
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        
+        ws.onopen = () => {
+            appendLog('[WebSocket] Connection established.', 'info');
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'log') {
+                appendLog(data.message, data.level);
+            }
+        };
+
+        ws.onclose = () => {
+            appendLog('[WebSocket] Connection closed. Please refresh the page.', 'error');
+        };
+
+        ws.onerror = (error) => {
+            appendLog('[WebSocket] An error occurred. See browser console for details.', 'error');
+            console.error("WebSocket Error: ", error);
+        };
+        
+        function appendLog(message, level = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${level}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll
+        }
+        // --- End WebSocket Setup ---
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); // This is the crucial fix.
+            const url = urlInput.value;
+            
+            analyzeButton.disabled = true;
+            analyzeButton.textContent = 'Analyzing...';
+            resultsContainer.innerHTML = '<div class="result-section"><p>Analysis in progress... Please wait.</p></div>';
+
+            try {
+                const response = await fetch(`/scrape?url=${encodeURIComponent(url)}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText}`);
+                }
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                const errorHtml = `
+                    <div class="result-section">
+                        <h2>Error</h2>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+                resultsContainer.innerHTML = errorHtml;
+                appendLog(`Scrape failed: ${error.message}`, 'error');
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeButton.textContent = 'Analyze with AI';
+            }
+        });
+
+        function displayResults(data) {
+             resultsContainer.innerHTML = `
+                <div class="result-section">
+                    <h2>AI Analysis: Streaming Logic</h2>
+                    <pre>${data.analysis?.streamingLogic || 'Not available.'}</pre>
+                </div>
+                <div class="result-section">
+                    <h2>AI Analysis: Download Links</h2>
+                    <pre>${JSON.stringify(data.analysis?.downloadLinks || [], null, 2)}</pre>
+                </div>
+                 <div class="result-section">
+                    <h2>Puppeteer: Intercepted Kwik Stream URLs</h2>
+                    <pre>${JSON.stringify(data.kwik?.sources || 'No Kwik URLs intercepted.', null, 2)}</pre>
+                </div>
+                <div class="result-section">
+                    <h2>Full Raw Data (Editable)</h2>
+                    <textarea id="full-data-textarea">${JSON.stringify(data, null, 2)}</textarea>
+                    <button id="save-button" style="margin-top: 1rem;">Save Mapping</button>
+                </div>
+             `;
+             document.getElementById('save-button').addEventListener('click', saveMapping);
+        }
+
+        async function saveMapping() {
+            const textarea = document.getElementById('full-data-textarea');
+            if (!textarea.value) {
+                alert('No data to save.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ data: textarea.value }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to save: ${response.statusText}`);
+                }
+                alert('Mapping saved successfully!');
+                appendLog('Mapping saved successfully to mapping.json!', 'info');
+            } catch (error) {
+                console.error('Save failed:', error);
+                alert(`Error saving mapping: ${error.message}`);
+                appendLog(`Error saving mapping: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
