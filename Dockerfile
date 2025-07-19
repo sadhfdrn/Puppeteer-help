@@ -18,7 +18,8 @@ RUN echo "🔍 Detecting browserless Chromium installation..." && \
     if [ -n "$BROWSERLESS_CHROME_PATH" ]; then \
         echo "✅ Found browserless Chromium at: $BROWSERLESS_CHROME_PATH" && \
         echo "$BROWSERLESS_CHROME_PATH" > /usr/src/app/.chromium_path && \
-        echo "PUPPETEER_EXECUTABLE_PATH=$BROWSERLESS_CHROME_PATH" >> /etc/environment && \
+        echo "export PUPPETEER_EXECUTABLE_PATH=\"$BROWSERLESS_CHROME_PATH\"" > /usr/src/app/.chromium_env && \
+        echo "export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true" >> /usr/src/app/.chromium_env && \
         "$BROWSERLESS_CHROME_PATH" --version; \
     else \
         echo "❌ Browserless Chromium not found!" && \
@@ -36,8 +37,11 @@ RUN npm ci --only=production && \
 RUN echo '#!/bin/bash' > /usr/src/app/start.sh && \
     echo 'set -e' >> /usr/src/app/start.sh && \
     echo '' >> /usr/src/app/start.sh && \
-    echo '# Load the cached Chromium path' >> /usr/src/app/start.sh && \
-    echo 'if [ -f /usr/src/app/.chromium_path ]; then' >> /usr/src/app/start.sh && \
+    echo '# Load the cached Chromium environment' >> /usr/src/app/start.sh && \
+    echo 'if [ -f /usr/src/app/.chromium_env ]; then' >> /usr/src/app/start.sh && \
+    echo '    source /usr/src/app/.chromium_env' >> /usr/src/app/start.sh && \
+    echo '    echo "✅ Using cached browserless Chromium: $PUPPETEER_EXECUTABLE_PATH"' >> /usr/src/app/start.sh && \
+    echo 'elif [ -f /usr/src/app/.chromium_path ]; then' >> /usr/src/app/start.sh && \
     echo '    CHROMIUM_PATH=$(cat /usr/src/app/.chromium_path)' >> /usr/src/app/start.sh && \
     echo '    echo "✅ Using cached browserless Chromium: $CHROMIUM_PATH"' >> /usr/src/app/start.sh && \
     echo '    export PUPPETEER_EXECUTABLE_PATH="$CHROMIUM_PATH"' >> /usr/src/app/start.sh && \
@@ -58,9 +62,13 @@ EXPOSE 3001
 
 # Health check using the cached Chromium path
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD CHROMIUM_PATH=$(cat /usr/src/app/.chromium_path 2>/dev/null || echo "") && \
-        if [ -n "$CHROMIUM_PATH" ]; then \
-            node -e "const puppeteer = require('puppeteer-core'); (async () => { try { const browser = await puppeteer.launch({executablePath: '$CHROMIUM_PATH', args: ['--no-sandbox', '--disable-setuid-sandbox']}); await browser.close(); } catch(e) { console.error(e); process.exit(1); } })()"; \
+    CMD if [ -f /usr/src/app/.chromium_env ]; then \
+            source /usr/src/app/.chromium_env; \
+        elif [ -f /usr/src/app/.chromium_path ]; then \
+            export PUPPETEER_EXECUTABLE_PATH=$(cat /usr/src/app/.chromium_path); \
+        fi && \
+        if [ -n "$PUPPETEER_EXECUTABLE_PATH" ]; then \
+            node -e "const puppeteer = require('puppeteer-core'); (async () => { try { const browser = await puppeteer.launch({executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, args: ['--no-sandbox', '--disable-setuid-sandbox']}); await browser.close(); } catch(e) { console.error(e); process.exit(1); } })()"; \
         else \
             echo "Health check failed: No Chromium path"; exit 1; \
         fi
