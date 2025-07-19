@@ -1,18 +1,20 @@
+'use strict';
 
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ai = void 0;
-const genkit_1 = require("genkit");
-const googleai_1 = require("@genkit-ai/googleai");
-exports.ai = (0, genkit_1.genkit)({
-    plugins: [
-        (0, googleai_1.googleAI)({
-        // Specify your API key if not set in GOOGLE_API_KEY environment variable
-        // apiKey: process.env.GOOGLE_API_KEY,
-        }),
-    ],
-    // The `logLevel` and `enableTracingAndMetrics` options have been removed
-    // from the genkit() constructor in v1.x.
-    // Logging is configured via environment variables or other mechanisms.
+const { genkit } = require('genkit');
+const { googleAI } = require('@genkit-ai/googleai');
+
+const ai = genkit({
+  plugins: [
+    googleAI({
+      models: [
+        {
+          name: 'gemini-pro',
+          model: 'models/gemini-1.5-pro-latest', // or explicitly: 'models/gemini-1.5-pro-002'
+        }
+      ],
+      // Optional: apiKey: process.env.GOOGLE_API_KEY,
+    }),
+  ],
 });
-//# sourceMappingURL=genkit.js.map
+
+module.exports = { ai };
