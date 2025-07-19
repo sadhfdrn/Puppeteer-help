@@ -12,7 +12,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzePageWithAI = void 0;
-require("dotenv/config");
 const genkit_1 = require("./genkit");
 const zod_1 = require("zod");
 const DownloadLinkSchema = zod_1.z.object({
