@@ -1,3 +1,4 @@
+
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ai = void 0;
@@ -10,5 +11,8 @@ exports.ai = (0, genkit_1.genkit)({
         // apiKey: process.env.GOOGLE_API_KEY,
         }),
     ],
+    // The `logLevel` and `enableTracingAndMetrics` options have been removed
+    // from the genkit() constructor in v1.x.
+    // Logging is configured via environment variables or other mechanisms.
 });
 //# sourceMappingURL=genkit.js.map
