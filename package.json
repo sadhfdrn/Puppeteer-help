@@ -1,119 +1,17 @@
 {
   "name": "ai-scraper-helper",
   "version": "2.0.0",
-  "description": "An AI-powered web scraper helper tool for analyzing anime streaming sites with advanced obfuscation detection and video URL extraction.",
+  "description": "AI-powered web scraper helper tool.",
   "main": "server.js",
   "type": "module",
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "build": "node build.js",
-    "clean": "rimraf dist/ data/ logs/",
-    "genkit:start": "genkit start -- ai/flow.js",
-    "genkit:dev": "genkit start --watch -- ai/flow.js",
-    "test": "jest",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "postinstall": "npm run build"
+    "start": "node server.js"
   },
-  "keywords": [
-    "web-scraping",
-    "ai",
-    "puppeteer",
-    "anime",
-    "video-extraction",
-    "obfuscation-detection",
-    "streaming",
-    "genkit"
-  ],
-  "author": "AI Scraper Helper Team",
-  "license": "MIT",
   "dependencies": {
-    "@genkit-ai/googleai": "^1.14.1",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "express-rate-limit": "^7.4.1",
-    "genkit": "^1.14.1",
-    "helmet": "^8.0.0",
-    "puppeteer-core": "^22.13.0",
-    "ws": "^8.18.0",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.7.5",
-    "@types/ws": "^8.5.12",
-    "eslint": "^9.12.0",
-    "jest": "^29.7.0",
-    "nodemon": "^3.1.7",
-    "prettier": "^3.3.3",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.6.3"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/your-username/ai-scraper-helper.git"
-  },
-  "bugs": {
-    "url": "https://github.com/your-username/ai-scraper-helper/issues"
-  },
-  "homepage": "https://github.com/your-username/ai-scraper-helper#readme",
-  "config": {
-    "browser": {
-      "timeout": 60000,
-      "retries": 3
-    },
-    "ai": {
-      "model": "googleai/gemini-2.0-pro",
-      "timeout": 30000
-    },
-    "server": {
-      "port": 3001,
-      "cors": true,
-      "rateLimit": {
-        "windowMs": 900000,
-        "max": 100
-      }
-    }
-  },
-  "nodemonConfig": {
-    "ignore": ["data/", "logs/", "*.json"],
-    "ext": "js,mjs,json",
-    "env": {
-      "NODE_ENV": "development"
-    }
-  },
-  "eslintConfig": {
-    "env": {
-      "node": true,
-      "es2022": true
-    },
-    "extends": ["eslint:recommended"],
-    "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module"
-    }
-  },
-  "prettier": {
-    "semi": true,
-    "trailingComma": "es5",
-    "singleQuote": true,
-    "printWidth": 80,
-    "tabWidth": 2
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "collectCoverageFrom": [
-      "**/*.js",
-      "!node_modules/**",
-      "!dist/**",
-      "!coverage/**"
-    ]
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "puppeteer-core": "^24.14.0"
   }
 }
