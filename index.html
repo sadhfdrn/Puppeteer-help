@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered AnimePahe Scraper Helper</title>
+    <style>
+        body { font-family: sans-serif; background-color: #121212; color: #e0e0e0; padding: 20px; }
+        h1, h2 { color: #bb86fc; }
+        h2 { border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 2rem; }
+        input, button { padding: 10px; border-radius: 5px; border: 1px solid #333; background-color: #222; color: #e0e0e0; margin-top: 10px; }
+        button { cursor: pointer; background-color: #03dac6; color: #121212; font-weight: bold; }
+        button:hover { background-color: #018786; }
+        #loading { display: none; }
+        pre { background-color: #1e1e1e; border: 1px solid #333; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
+        textarea { width: 100%; height: 200px; background-color: #222; color: #e0e0e0; border: 1px solid #333; border-radius: 5px; margin-top: 5px;}
+        .results-container { display: flex; flex-direction: column; gap: 1rem; }
+        .result-section { border: 1px solid #444; border-radius: 8px; padding: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>AI-Powered AnimePahe Scraper Helper</h1>
+    <p>Enter an AnimePahe episode URL. Puppeteer will fetch the page, and an AI will analyze its content to provide scraping insights.</p>
+    
+    <form id="scrape-form">
+        <input type="text" id="url-input" placeholder="https://animepahe.ru/play/..." required style="width: 500px;">
+        <button type="submit">Analyze with AI</button>
+    </form>
+    
+    <div id="loading">
+        <h2>Loading... Please wait.</h2>
+        <p>Puppeteer is launching and the AI is analyzing the page. This might take a moment. Check the terminal for live progress.</p>
+    </div>
+    
+    <div id="results-container" class="results-container">
+      <!-- Results will be injected here -->
+    </div>
+
+
+    <script>
+        const form = document.getElementById('scrape-form');
+        const urlInput = document.getElementById('url-input');
+        const loadingDiv = document.getElementById('loading');
+        const resultsContainer = document.getElementById('results-container');
+        let currentData = null;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = urlInput.value;
+            
+            loadingDiv.style.display = 'block';
+            resultsContainer.innerHTML = '';
+            currentData = null;
+
+            try {
+                const response = await fetch(`/scrape?url=${encodeURIComponent(url)}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText}`);
+                }
+                const data = await response.json();
+                currentData = data;
+                displayResults(data);
+
+            } catch (error) {
+                const errorHtml = `
+                    <div class="result-section">
+                        <h2>Error</h2>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+                resultsContainer.innerHTML = errorHtml;
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        });
+
+        function displayResults(data) {
+             resultsContainer.innerHTML = `
+                <div class="result-section">
+                    <h2>AI Analysis: Streaming Logic</h2>
+                    <pre>${data.analysis?.streamingLogic || 'Not available.'}</pre>
+                </div>
+                <div class="result-section">
+                    <h2>AI Analysis: Download Links</h2>
+                    <pre>${JSON.stringify(data.analysis?.downloadLinks || [], null, 2)}</pre>
+                </div>
+                 <div class="result-section">
+                    <h2>Puppeteer: Intercepted Kwik Stream URLs</h2>
+                    <pre>${JSON.stringify(data.kwik?.sources || 'No Kwik URLs intercepted.', null, 2)}</pre>
+                </div>
+                <div class="result-section">
+                    <h2>Full Raw Data (Editable)</h2>
+                    <textarea id="full-data-textarea" readonly>${JSON.stringify(data, null, 2)}</textarea>
+                    <button id="save-button">Save Mapping</button>
+                </div>
+             `;
+             document.getElementById('save-button').addEventListener('click', saveMapping);
+        }
+
+        async function saveMapping() {
+            const textarea = document.getElementById('full-data-textarea');
+            if (!textarea.value) {
+                alert('No data to save.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ data: textarea.value }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to save: ${response.statusText}`);
+                }
+                alert('Mapping saved successfully!');
+            } catch (error) {
+                console.error('Save failed:', error);
+                alert(`Error saving mapping: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
