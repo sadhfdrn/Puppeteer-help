@@ -622,7 +622,7 @@
 
             initializeWebSocket() {
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${protocol}//${window.location.host}`;
+                const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || (protocol === 'wss:' ? 443 : 80)}`;
                 
                 try {
                     this.ws = new WebSocket(wsUrl);

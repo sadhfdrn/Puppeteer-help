@@ -10,13 +10,7 @@ const { scrapeAnimePahe } = require('./scraper');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ 
-  server,
-  verifyClient: (info) => {
-    // Basic origin verification
-    return info.origin === `http://localhost:${port}` || process.env.NODE_ENV === 'development';
-  }
-});
+const wss = new WebSocket.Server({ server });
 
 const port = process.env.PORT || 3001;
 
@@ -28,7 +22,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", `ws://localhost:${port}`]
+      connectSrc: ["'self'", `ws://localhost:*`, `ws://127.0.0.1:*`, 'ws://*:*']
     }
   }
 }));
@@ -68,28 +62,17 @@ app.use(express.static(path.join(__dirname), {
 // Track active connections
 let activeConnections = new Set();
 
-// Dynamic import for Genkit flows (ESM compatibility)
-let analyzePageWithAI;
-let isAIModuleLoaded = false;
-
-const loadAIModule = async () => {
-  try {
-    const module = await import('./ai/flow.js');
-    analyzePageWithAI = module.analyzePageWithAI;
-    isAIModuleLoaded = true;
+// Genkit flows
+const { analyzePageWithAI } = require('./ai/flow.js');
+const isAIModuleLoaded = !!analyzePageWithAI;
+if(isAIModuleLoaded) {
     console.log('[Server] AI module loaded successfully.');
     broadcastLog('[Server] AI analysis service is now available.', 'info');
-  } catch (err) {
-    console.error('[Server] Failed to load AI module:', err);
+} else {
+    console.error('[Server] Failed to load AI module.');
     broadcastLog('[Server] Failed to initialize AI service. Please check configuration.', 'error');
-    
-    // Retry loading after 10 seconds
-    setTimeout(loadAIModule, 10000);
-  }
-};
+}
 
-// Initialize AI module
-loadAIModule();
 
 // Health check endpoint
 app.get('/health', (req, res) => {
