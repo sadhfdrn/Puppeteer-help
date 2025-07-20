@@ -14,7 +14,7 @@
     "helmet": "^8.1.0",
     "express-rate-limit": "8.0.1",
     "ws": "^8.18.3",
-    "puppeteer-core": "^24.14.0",
+    "puppeteer-real-browser": "^1.4.3",
     "genkit": "^1.15.1",
     "@genkit-ai/googleai": "^1.15.1"
   }

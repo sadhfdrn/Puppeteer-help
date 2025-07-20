@@ -1,76 +1,56 @@
+# Use a base image that has Node.js and Chromium pre-installed.
+# The browserless/chrome image is a good choice for this.
 FROM browserless/chrome
 
+# Set the working directory inside the container
 WORKDIR /usr/src/app
 
-# Set base environment variables
+# Set the executable path for Puppeteer
+# This tells puppeteer-core to use the Chromium instance included in the base image.
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
 ENV GOOGLE_API_KEY=AIzaSyBUVv3_99ywbdcl3kdUqVqab-r5mWGFYjw
+
+# Skip Puppeteer's Chromium download since we're using the base image's Chrome
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-# Detect and cache the browserless Chromium path at build time
-RUN echo "🔍 Detecting browserless Chromium installation..." && \
-    BROWSERLESS_CHROME_PATH="" && \
-    for path in "/usr/bin/google-chrome" "/usr/bin/google-chrome-stable" "/usr/bin/chromium" "/usr/bin/chromium-browser"; do \
-        if [ -x "$path" ]; then \
-            BROWSERLESS_CHROME_PATH="$path"; \
-            break; \
-        fi \
-    done && \
-    if [ -n "$BROWSERLESS_CHROME_PATH" ]; then \
-        echo "✅ Found browserless Chromium at: $BROWSERLESS_CHROME_PATH" && \
-        echo "$BROWSERLESS_CHROME_PATH" > /usr/src/app/.chromium_path && \
-        echo "export PUPPETEER_EXECUTABLE_PATH=\"$BROWSERLESS_CHROME_PATH\"" > /usr/src/app/.chromium_env && \
-        echo "export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true" >> /usr/src/app/.chromium_env && \
-        "$BROWSERLESS_CHROME_PATH" --version; \
-    else \
-        echo "❌ Browserless Chromium not found!" && \
-        exit 1; \
-    fi
-
-# Copy package files for better caching
-COPY package*.json ./
-
-# Install dependencies (cached layer unless package.json changes)
-RUN npm ci --only=production && \
-    npm cache clean --force
-
-# Create optimized startup script
+# Create a startup script that checks for existing Chromium
 RUN echo '#!/bin/bash' > /usr/src/app/start.sh && \
     echo 'set -e' >> /usr/src/app/start.sh && \
     echo '' >> /usr/src/app/start.sh && \
-    echo '# Load the cached Chromium environment' >> /usr/src/app/start.sh && \
-    echo 'if [ -f /usr/src/app/.chromium_env ]; then' >> /usr/src/app/start.sh && \
-    echo '    source /usr/src/app/.chromium_env' >> /usr/src/app/start.sh && \
-    echo '    echo "✅ Using cached browserless Chromium: $PUPPETEER_EXECUTABLE_PATH"' >> /usr/src/app/start.sh && \
-    echo 'elif [ -f /usr/src/app/.chromium_path ]; then' >> /usr/src/app/start.sh && \
-    echo '    CHROMIUM_PATH=$(cat /usr/src/app/.chromium_path)' >> /usr/src/app/start.sh && \
-    echo '    echo "✅ Using cached browserless Chromium: $CHROMIUM_PATH"' >> /usr/src/app/start.sh && \
-    echo '    export PUPPETEER_EXECUTABLE_PATH="$CHROMIUM_PATH"' >> /usr/src/app/start.sh && \
+    echo '# Check if Chrome/Chromium is already available' >> /usr/src/app/start.sh && \
+    echo 'if command -v google-chrome >/dev/null 2>&1; then' >> /usr/src/app/start.sh && \
+    echo '    echo "Chrome found at: $(which google-chrome)"' >> /usr/src/app/start.sh && \
+    echo '    export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true' >> /usr/src/app/start.sh && \
+    echo 'elif command -v chromium >/dev/null 2>&1; then' >> /usr/src/app/start.sh && \
+    echo '    echo "Chromium found at: $(which chromium)"' >> /usr/src/app/start.sh && \
+    echo '    export PUPPETEER_EXECUTABLE_PATH=$(which chromium)' >> /usr/src/app/start.sh && \
+    echo '    export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true' >> /usr/src/app/start.sh && \
+    echo 'elif command -v chromium-browser >/dev/null 2>&1; then' >> /usr/src/app/start.sh && \
+    echo '    echo "Chromium-browser found at: $(which chromium-browser)"' >> /usr/src/app/start.sh && \
+    echo '    export PUPPETEER_EXECUTABLE_PATH=$(which chromium-browser)' >> /usr/src/app/start.sh && \
     echo '    export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true' >> /usr/src/app/start.sh && \
     echo 'else' >> /usr/src/app/start.sh && \
-    echo '    echo "❌ Chromium path cache not found!"' >> /usr/src/app/start.sh && \
-    echo '    exit 1' >> /usr/src/app/start.sh && \
+    echo '    echo "No Chrome/Chromium found, Puppeteer will download its own"' >> /usr/src/app/start.sh && \
+    echo '    unset PUPPETEER_SKIP_CHROMIUM_DOWNLOAD' >> /usr/src/app/start.sh && \
     echo 'fi' >> /usr/src/app/start.sh && \
     echo '' >> /usr/src/app/start.sh && \
-    echo 'echo "🚀 Starting application with Chromium: $PUPPETEER_EXECUTABLE_PATH"' >> /usr/src/app/start.sh && \
+    echo '# Start the application' >> /usr/src/app/start.sh && \
     echo 'exec npm start' >> /usr/src/app/start.sh && \
     chmod +x /usr/src/app/start.sh
 
-# Copy application code (this layer changes most frequently)
+# Copy package.json and package-lock.json (if available)
+COPY package*.json ./
+
+# Use npm ci for faster, reliable, reproducible builds
+# npm ci is designed for automated environments and installs from package-lock.json
+RUN npm ci --only=production
+
+# Copy the rest of the application files
 COPY . .
 
+# Your application's main file is server.js
+# Expose the port the app runs on
 EXPOSE 3001
 
-# Health check using the cached Chromium path
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD if [ -f /usr/src/app/.chromium_env ]; then \
-            source /usr/src/app/.chromium_env; \
-        elif [ -f /usr/src/app/.chromium_path ]; then \
-            export PUPPETEER_EXECUTABLE_PATH=$(cat /usr/src/app/.chromium_path); \
-        fi && \
-        if [ -n "$PUPPETEER_EXECUTABLE_PATH" ]; then \
-            node -e "const puppeteer = require('puppeteer-core'); (async () => { try { const browser = await puppeteer.launch({executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, args: ['--no-sandbox', '--disable-setuid-sandbox']}); await browser.close(); } catch(e) { console.error(e); process.exit(1); } })()"; \
-        else \
-            echo "Health check failed: No Chromium path"; exit 1; \
-        fi
-
-CMD ["/usr/src/app/start.sh"]
+# Use the startup script instead of direct npm start
+CMD [ "/usr/src/app/start.sh" ]

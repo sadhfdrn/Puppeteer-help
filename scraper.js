@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer-core');
+const { connect } = require('puppeteer-real-browser');
 const { analyzePageWithAI } = require('./ai/flow.js');
 
 // Configuration constants
@@ -7,12 +7,7 @@ const CONFIG = {
   PAGE_TIMEOUT: 30000,
   NAVIGATION_TIMEOUT: 60000,
   MAX_RETRIES: 3,
-  RETRY_DELAY: 2000,
-  USER_AGENTS: [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-  ]
+  RETRY_DELAY: 2000
 };
 
 /**
@@ -20,24 +15,6 @@ const CONFIG = {
  * @param {number} ms - Milliseconds to sleep
  */
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-/**
- * Get random user agent
- * @returns {string} Random user agent string
- */
-const getRandomUserAgent = () => {
-  return CONFIG.USER_AGENTS[Math.floor(Math.random() * CONFIG.USER_AGENTS.length)];
-};
-
-/**
- * Extract m3u8 URLs from text content
- * @param {string} text - Text content to search
- * @returns {string[]} Array of found m3u8 URLs
- */
-const extractM3U8URLs = (text) => {
-  const m3u8Regex = /https?:\/\/[^\s"']+\.m3u8[^\s"']*/g;
-  return text.match(m3u8Regex) || [];
-};
 
 /**
  * Extract various video URLs from text content
@@ -73,7 +50,7 @@ async function processKwikURL(kwikUrl, referrer, logCallback) {
       const response = await fetch(kwikUrl, {
         headers: {
           'Referer': referrer,
-          'User-Agent': getRandomUserAgent(),
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.5',
           'Accept-Encoding': 'gzip, deflate',
@@ -115,7 +92,6 @@ async function processKwikURL(kwikUrl, referrer, logCallback) {
         };
       }
       
-      // Wait before retrying
       await sleep(CONFIG.RETRY_DELAY * attempt);
     }
   }
@@ -134,20 +110,17 @@ async function setupRequestInterception(page, collectedData, logCallback) {
     const url = request.url();
     const resourceType = request.resourceType();
     
-    // Block unnecessary resources for faster loading
     if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
       request.abort();
       return;
     }
     
-    // Intercept streaming URLs
     if (url.includes('kwik.cx') || url.includes('kwik.sx')) {
       logCallback(`[Puppeteer] Intercepted Kwik URL: ${url}`);
       collectedData.kwik.urls.push(url);
       collectedData.referrer = request.headers().referer || collectedData.referrer;
     }
     
-    // Look for other streaming patterns
     if (url.includes('.m3u8') || url.includes('stream') || url.includes('video')) {
       logCallback(`[Puppeteer] Intercepted potential stream URL: ${url}`);
       collectedData.streamUrls = collectedData.streamUrls || [];
@@ -160,92 +133,10 @@ async function setupRequestInterception(page, collectedData, logCallback) {
   page.on('response', response => {
     const url = response.url();
     
-    // Log important responses
     if (url.includes('api') || url.includes('ajax') || url.includes('stream')) {
       logCallback(`[Puppeteer] Response from: ${url} (${response.status()})`);
     }
   });
-}
-
-/**
- * Configure browser page with security and performance settings
- * @param {Page} page - Puppeteer page instance
- * @param {Function} logCallback - Logging callback function
- */
-async function configurePage(page, logCallback) {
-  // Set viewport
-  await page.setViewport({ width: 1920, height: 1080 });
-  
-  // Set user agent
-  await page.setUserAgent(getRandomUserAgent());
-  
-  // Set extra headers
-  await page.setExtraHTTPHeaders({
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br'
-  });
-  
-  // Block ads and trackers
-  await page.evaluateOnNewDocument(() => {
-    // Block common ad/tracker domains
-    const blockedDomains = [
-      'googletagmanager.com',
-      'google-analytics.com',
-      'googlesyndication.com',
-      'facebook.com/tr',
-      'doubleclick.net'
-    ];
-    
-    const originalFetch = window.fetch;
-    window.fetch = function(...args) {
-      const url = args[0];
-      if (typeof url === 'string' && blockedDomains.some(domain => url.includes(domain))) {
-        return Promise.reject(new Error('Blocked'));
-      }
-      return originalFetch.apply(this, args);
-    };
-  });
-  
-  // Handle page errors
-  page.on('pageerror', error => {
-    logCallback(`[Puppeteer] Page error: ${error.message}`, 'warn');
-  });
-  
-  page.on('console', msg => {
-    if (msg.type() === 'error') {
-      logCallback(`[Browser Console] ${msg.text()}`, 'warn');
-    }
-  });
-}
-
-/**
- * Handles DDoS Guard and other interstitial pages.
- * @param {Page} page - Puppeteer page instance
- * @param {Function} logCallback - Logging callback function
- */
-async function handleInterstitialPages(page, logCallback) {
-  try {
-    const title = await page.title();
-    if (title.toLowerCase().includes('ddos-guard')) {
-      logCallback('[Puppeteer] DDoS-Guard detected. Waiting for it to resolve...');
-      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 });
-      logCallback('[Puppeteer] DDoS-Guard page likely resolved.');
-    }
-
-    // Handle pahe.win redirects
-    if (page.url().includes('pahe.win')) {
-      logCallback('[Puppeteer] pahe.win redirect detected. Waiting and clicking continue...');
-      await sleep(6000); // Wait for the countdown
-      const continueButton = await page.$('form button[type=submit]');
-      if(continueButton) {
-        await continueButton.click();
-        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
-        logCallback('[Puppeteer] Clicked continue on redirect page.');
-      }
-    }
-  } catch (error) {
-    logCallback(`[Puppeteer] Could not bypass interstitial page: ${error.message}`, 'warn');
-  }
 }
 
 /**
@@ -255,10 +146,8 @@ async function handleInterstitialPages(page, logCallback) {
  */
 async function waitForPageLoad(page, logCallback) {
   try {
-    // Wait for network to be idle
     await page.waitForNetworkIdle({idleTime: 1000, timeout: CONFIG.PAGE_TIMEOUT})
     
-    // Wait for common anime site elements
     const selectors = [
       'iframe',
       '[class*="player"]',
@@ -273,11 +162,10 @@ async function waitForPageLoad(page, logCallback) {
         logCallback(`[Puppeteer] Found element: ${selector}`);
         break;
       } catch (error) {
-        // Continue to next selector
+        // Continue
       }
     }
     
-    // Additional wait for dynamic content
     await sleep(3000);
     
   } catch (error) {
@@ -337,30 +225,14 @@ async function scrapeAnimePahe(url, logCallback) {
   logCallback('[Puppeteer] Initializing browser...');
   
   try {
-    // Browser launch configuration
-    const browserOptions = {
-      headless: process.env.NODE_ENV === 'production' ? 'new' : false,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor'
-      ],
-      timeout: CONFIG.BROWSER_TIMEOUT
-    };
-    
-    browser = await puppeteer.launch(browserOptions);
+    const { browser, page } = await connect({
+        headless: 'auto',
+        turnstile: true,
+        args: ['--start-maximized']
+    });
+
     logCallback('[Puppeteer] Browser launched successfully');
     
-    const page = await browser.newPage();
-    
-    // Initialize data collection object
     const collectedData = {
       analysis: {},
       downloadLinks: [],
@@ -375,48 +247,24 @@ async function scrapeAnimePahe(url, logCallback) {
         start: startTime
       }
     };
-
-    // Configure page
-    await configurePage(page, logCallback);
     
-    // Setup request interception
     await setupRequestInterception(page, collectedData, logCallback);
     
     logCallback(`[Puppeteer] Navigating to ${url}...`);
     
-    // Navigate with retry logic
-    for (let attempt = 1; attempt <= CONFIG.MAX_RETRIES; attempt++) {
-      try {
-        await page.goto(url, { 
-          waitUntil: 'networkidle2', 
-          timeout: CONFIG.NAVIGATION_TIMEOUT 
-        });
-        await handleInterstitialPages(page, logCallback);
-        break;
-      } catch (error) {
-        logCallback(`[Puppeteer] Navigation attempt ${attempt} failed: ${error.message}`, 'warn');
-        if (attempt === CONFIG.MAX_RETRIES) {
-          throw new Error(`Failed to navigate after ${CONFIG.MAX_RETRIES} attempts: ${error.message}`);
-        }
-        await sleep(CONFIG.RETRY_DELAY * attempt);
-      }
-    }
-    
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: CONFIG.NAVIGATION_TIMEOUT });
+
     logCallback('[Puppeteer] Page loaded successfully');
     collectedData.processingTime.pageLoaded = Date.now();
     
-    // Wait for page to fully load
     await waitForPageLoad(page, logCallback);
     
-    // Extract page information
     collectedData.pageInfo = await extractPageInfo(page, logCallback);
     
-    // Get page content
     logCallback('[Puppeteer] Extracting page content...');
     const pageContent = await page.content();
     collectedData.processingTime.contentExtracted = Date.now();
     
-    // AI Analysis
     logCallback('[AI Flow] Sending page content to AI for analysis...');
     try {
       const aiAnalysis = await analyzePageWithAI(pageContent);
@@ -434,14 +282,10 @@ async function scrapeAnimePahe(url, logCallback) {
     
     collectedData.processingTime.aiAnalysisCompleted = Date.now();
     
-    // Process Kwik URLs
     if (collectedData.kwik.urls.length > 0) {
       logCallback(`[Puppeteer] Processing ${collectedData.kwik.urls.length} Kwik URLs...`);
       
-      // Remove duplicates
       const uniqueKwikUrls = [...new Set(collectedData.kwik.urls)];
-      
-      // Process URLs concurrently with limit
       const concurrencyLimit = 3;
       const kwikResults = [];
       
@@ -456,18 +300,15 @@ async function scrapeAnimePahe(url, logCallback) {
       collectedData.kwik.sources = kwikResults;
       collectedData.processingTime.kwikProcessingCompleted = Date.now();
       
-      // Summary of Kwik processing
       const successCount = kwikResults.filter(result => result.success).length;
       logCallback(`[Puppeteer] Kwik processing completed: ${successCount}/${kwikResults.length} successful`);
     } else {
       logCallback('[Puppeteer] No Kwik URLs were intercepted');
     }
     
-    // Final processing time
     collectedData.processingTime.completed = Date.now();
     collectedData.processingTime.totalDuration = collectedData.processingTime.completed - startTime;
     
-    // Log performance metrics
     const metrics = {
       navigation: collectedData.processingTime.pageLoaded - startTime,
       contentExtraction: collectedData.processingTime.contentExtracted - collectedData.processingTime.pageLoaded,
@@ -484,7 +325,6 @@ async function scrapeAnimePahe(url, logCallback) {
     const duration = Date.now() - startTime;
     logCallback(`[Puppeteer] Critical error after ${duration}ms: ${error.message}`, 'error');
     
-    // Return partial data if available
     return {
       error: error.message,
       processingTime: {
